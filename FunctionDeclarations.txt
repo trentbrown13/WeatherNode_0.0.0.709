@@ -1,0 +1,23 @@
+// Get BME Readings
+char* getBMETemp(BME280_I2C &theBME);
+char* getBMEHumidity(BME280_I2C &theBME);
+char* getBMEPressure(BME280_I2C &theBME);
+
+// Get Dallas Temp readings
+char* getTubTemp();
+char* getOutTemp();
+
+// Get Battery readings
+float getBatteryLevel();
+
+// Upgrade Functions
+char* LastcharDel(char* name);
+int compareSubstr(char *substr_version1, char *substr_version2, 
+                  int len_substr_version1, int len_substr_version2);
+int compareVersion(char* version1, const char* version2);
+void checkForUpdates(bool force);
+	  
+// PubSub functions
+void callback(char* topic, byte* payload, unsigned int length);
+void reconnect();
+
