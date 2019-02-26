@@ -1,0 +1,11 @@
+02/25/2019
+1:
+In NodeRed, find way to edit one blob for a tab and use it for other tabs.
+Example: Only use the GUI to edit the Wemos test tab as a template for the the
+other tabs. Do a search and replace on that blob and save as the other tabs.
+
+2:
+Install Grafana and InfluxDB to RPI and use for graphing historical data
+points.
+
+3: Code Cleanup
