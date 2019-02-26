@@ -1,4 +1,5 @@
 
+
 /************************ NEW PIN DEFINITIONS **************************************
   //  Both npn gates are not being used so remove them freeing up pins D0 and D5
   // D4 was  used batt charge status but it is also the internal led pin
@@ -115,3 +116,122 @@ if (millis() >= pingTimer) { //pingSpeed millis since last ping; do another ping
 New repo for .709. Going to add ability to specify upgrade file in NodeRed rather than just
 using the auto-upgrade. NodeRed shouid use a "file picker" widgit
  **************************************************************************************/
+=======
+
+/************************ NEW PIN DEFINITIONS **************************************
+  //  Both npn gates are not being used so remove them freeing up pins D0 and D5
+  // D4 was  used batt charge status but it is also the internal led pin
+  // Now use D0 for batt charge status (to row 20) and route D04 to opposite row 20) and D5 to row 21
+  // for future use
+  static const byte DNE_PIN =  D0;     //  Batt Charged yes/no was D4
+  //static const byte DST_PIN =  D5;   // Not used, Terminated on row 22
+  static const byte SCL_PIN =  D1;     // i2c SCL
+  static const byte SDA_PIN =  D2;     // i2c SDA
+  static const byte ECHO_PIN = D7;     // USS ECHO Pin
+  static const byte TRIG_PIN = D8;     // USS TRIG Pin
+  static const byte ONEB_PIN = D6;     // One Wir e buss 4.75K ohm resistor
+  static const byte PWR_PIN =  D3;     // Batt Charging yes/no was D0
+  //static const byte DNE_PIN =  D4;     // Not used, terminated on row 20
+  static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
+/*********************** END PIN DEFINITIONS *****************************************/
+
+/************************************************************************************
+  Ver 0007A
+
+  Implements HTTP Update and subsribes to nodered looking for update. If Update == 1, then
+  calls checkForUpdate.
+
+  For some reason, it would not work with Upgrade vs Update and I had to add this to main loop:
+
+
+  if (!client.connected()) {
+      reconnect();
+    }
+
+
+    Serial.println(F("done with if not client.connect"));
+
+    // Added these 4 lines for Update subscription to work, Upgrade never worked
+    delay(500);
+    client.subscribe("wemosTestClient/setSleepTime");
+    client.loop();
+    client.subscribe("wemosTestClient/Update");
+    client.loop();
+
+  {
+  "firmware": [
+    {
+      "": "0.0.0.2",
+      "platforms": "2",
+      "customers": "B&T",
+      "description": "Home Weather Nodes",
+      "url": "http://HomePi/WeatherNodes/WeatherNode_0.0.0.2",
+      "build_epoch": "",
+      "md5": "26800fc59dc5091d06e6c01556f0e551",
+      "prereq": "0.0.0.1"
+
+
+  For now, just use flat txt with  string, add other items and format in json later
+
+  Using this link as a starting point (already had it working in POC sketch httpUpdate4.ino
+  https://www.bakke.online/index.php/2017/06/02/self-updating-ota-firmware-for-esp8266/
+
+  that example uses MAC address to identify the unique sketch, I'll try using the
+  pubsub ClientID and using node red to tell the device when to check for an update. this should
+  default to "do not check" on bootup. later add md5 checksum check -
+  if the checksum is the same, do not upgrade and send message "s same,not upgrading"
+
+  07/27/2018
+  Creating WeatherNode_0003, this marks where we have a working POC OTA described above.
+  For now it checks updates every time through the loop, this  will start cleaning up
+  the code then add node-red and pubsub callbacks to initiate the upgrade
+
+  Upto 0005 due to testing and cleanup
+
+  Steps to upgrade:
+  1: Create new build with changes and updated  string
+  2: Export binary and copy it to directory as (example)
+  pi@MesaPi1:/var/www/html/weathernodes/wemosTestClient $ ls wemosTestClient.bin
+  wemosTestClient.bin
+  example: firmware image trying to upload http://192.168.100.238/weathernodes/wemosTestClient/wemosTestClient.bin
+  NOTE: May change this to  include  string in build ie wemostTestClient_0004.bin
+  Later will have one weatherNode build once config file is done.
+  3: change . file to updated  string
+
+  V0007A todo
+  1: update version function to strip dotted notation
+  2: Add range sensor callibration nodes
+  3: implement function for manufacturing /callibration mode
+  4: Look at simplyfing lcd/distance sensor functions
+
+V0007G
+1: Version updated to include dotted seperator and functions to parse the version string
+2: Implemented manufacturing/callibration mode, currently used for setSleeptime and ADC setting
+3: Rewrote Update/Upgrade function to not use String at all - only string functions
+4: Striped out as much String as I could from entire program and insetertd F macro everywhere
+TODO
+1: implement range sensor callibration
+2: implement "upgrade force" to force a downgrade
+3: implement "ESP.restart() in NodeRed
+4: Config File
+
+V 0.0.0.708 (H is 8th letter in alphabet
+implement range sensor callibration
+maxPingDist implemented in .708
+
+V 0.0.0.708.git
+first stab at using Git
+
+V 0.0.0.709
+1: Made LCD display real time measurments, rather than last taken when wifi was up 
+ this was done in v 0.0.0.708.git
+2: Had a millis() rollover issue in Toggle LCD (crashed every 49.7 days). Got rid of these lines
+if (millis() >= pingTimer) { //pingSpeed millis since last ping; do another ping
+    
+    pingTimer += pingSpeed;   // set the next ping time
+
+02/02/2019
+New repo for .709. Going to add ability to specify upgrade file in NodeRed rather than just
+using the auto-upgrade. NodeRed shouid use a "file picker" widgit
+ **************************************************************************************/
+
