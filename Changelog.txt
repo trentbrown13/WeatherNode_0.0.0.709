@@ -233,5 +233,11 @@ if (millis() >= pingTimer) { //pingSpeed millis since last ping; do another ping
 02/02/2019
 New repo for .709. Going to add ability to specify upgrade file in NodeRed rather than just
 using the auto-upgrade. NodeRed shouid use a "file picker" widgit
+
+02/25/2019
+1: For upgrade, just added a "UPGRADE FORCE" option that simpy bypases the
+version check
+2: Added Function Declaration to top of main c file. May move these to a
+header file. perhaps create a small library for publish/print sensor readings
  **************************************************************************************/
 
