@@ -1,13 +1,26 @@
 02/25/2019
-1:
+
+Not Started: 
 In NodeRed, find way to edit one blob for a tab and use it for other tabs.
 Example: Only use the GUI to edit the Wemos test tab as a template for the the
 other tabs. Do a search and replace on that blob and save as the other tabs.
 
-2:
+DONE 03/01/2019. Grafana running on MesaPi1, all nodes being graphed - very cool!
 Install Grafana and InfluxDB to RPI and use for graphing historical data
 points.
 
-3: Code Cleanup
+IN PROGRESS Code Cleanup
 	perhaps move function declaration to header file, create small library
 for publish/serial/lcd print sensor readings
+
+Not Started: 
+Add Deep Sleep in two steps.
+
+Note: THIS WILL REQUIRE HW CHANGE!
+Step1: Manual Deep Sleep controled via mqtt (Node Red) with timer adjustment
+	enabled/disabled boolean - default:disabled
+	deepSleepTime range 1hr - 12 hr; default:1hr
+Step2: Auto Deep Sleep triggered by VCC low voltage over period of time
+
+
+
