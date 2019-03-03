@@ -229,7 +229,7 @@ static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
   static const byte SDA_PIN =  D2;     // i2c SDA
   static const byte ECHO_PIN = D7;     // USS ECHO Pin
   static const byte TRIG_PIN = D8;     // USS TRIG Pin
-  static const byte ONEB_PIN = D6;     // One Wir e buss 4.75K ohm resistor
+  static const byte ONEB_PIN = D6;     // One Wire buss 4.75K ohm resistor
   static const byte PWR_PIN =  D3;     // Batt Charging yes/no was D0
   //static const byte DNE_PIN =  D4;     // Not used, terminated on row 20
   static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
@@ -244,15 +244,15 @@ static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
 
 
 //*************************************** BTTN_PIN Push LCD Section ****************************************************
-unsigned long lcdTurnedOnAt; // when lcd was turned on
-int turnOffLcdDelay = 5000; // turn off LED after this time
+//unsigned long lcdTurnedOnAt; // when lcd was turned on
+int turnOffLcdDelay = 5000; // turn off LCD after this time
 bool lcdReady = false; // flag for when BTTN_PIN is let go
 bool lcdState = false; // for LCD is on or not.
 //*************************************** END BTTN_PIN Push LCD Section ***********************************************
 
 
 //*************************************** HC-S04 UltraSonic Sensor ***************************************************
-unsigned long sensorInRangeMillis; // when in sensor range
+//unsigned long sensorInRangeMillis; // when in sensor range
 byte pingMaxDist = 60;
 byte MIN_DIST = 20;
 int pingSpeed = 500;
@@ -328,8 +328,6 @@ const char* mqtt_server = "192.168.100.238";
 
 //************************************** WiFi MILLIS & SLEEP DEFFINITIONS **********************
 bool awake = true;
-unsigned long previousMillis = 0;
-unsigned long sleepStartMillis = 0;
 int sleeptime = 40; // initial sleep seconds, was byte
 //byte sleeptime = 40; // range 1 - 255 or about 3 minutes sleeptime
 byte numReadings = 2;
@@ -1737,6 +1735,7 @@ void publishDallasTemps(void)
 unsigned int checkDistance()
 {
   unsigned int uS = sonar.ping(); // Send ping, get ping time in microseconds (uS).
+  unsigned long sensorInRangeMillis; // when in sensor range
   uS = sonar.ping();
   unsigned int Tmp = uS / US_ROUNDTRIP_CM;  // US_ROUNDTRIP_CM included in lib ?
 
@@ -1754,11 +1753,9 @@ unsigned int checkDistance()
 
 void toggleLCD(void)
   {
-    unsigned int dS;
-    unsigned long currentMillis = millis();
-    dS = checkDistance();
-
-  // make sure this code isn't checked until after the range sensor is activated
+   unsigned long currentMillis = millis();
+   unsigned long lcdTurnedOnAt;
+   // make sure this code isn't checked until after the range sensor is activated
   if (lcdReady) {
     lcdState = true;
     // save when the LED turned on
@@ -1767,8 +1764,7 @@ void toggleLCD(void)
     lcdReady = false;
     lcdOn();
     lcdDisplayTemps2();
-    //  }
-  }
+   }
 
   // see if we are watching for the time to turn off LCD
   if (lcdState) {
@@ -1882,10 +1878,9 @@ void setup() {
 ******************************************************************************/
 void loop() {
 
-
-  //Serial.println(F("At very top of loop"));
   unsigned long currentMillis = millis();
-  unsigned int dS;
+  unsigned long previousMillis = 0;
+  unsigned long sleepStartMillis = 0;
   sleepStartMillis = millis();
   
 #ifdef NTP_ON
@@ -1984,9 +1979,6 @@ void loop() {
     //******************** WAKING UP ************************************
     // had to add 10 seconds to sleeptime, not sure why
     if ((unsigned long)(currentMillis - previousMillis) >= (sleeptime * 1000 + 10000)) {
-      //if ((unsigned long)(sleepStartMillis - previousMillis) >= sleeptime) {
-      //  Serial.println(F("**************Time to Wake up and get to work!******************"));
-      // Serial.println(F("************** awake = TRUE ******************"));
       awake = true;
       WiFi.forceSleepWake();
       previousMillis = millis();
