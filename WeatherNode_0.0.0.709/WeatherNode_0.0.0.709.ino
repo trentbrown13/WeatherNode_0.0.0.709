@@ -1,23 +1,6 @@
-
-/************************ NEW PIN DEFINITIONS **************************************
-  //  Both npn gates are not being used so remove them freeing up pins D0 and D5
-  // D4 was  used batt charge status but it is also the internal led pin
-  // Now use D0 for batt charge status (to row 20) and route D04 to opposite row 20) and D5 to row 21
-  // for future use
-  static const byte DNE_PIN =  D0;     //  Batt Charged yes/no was D4
-  //static const byte DST_PIN =  D5;   // Not used, Terminated on row 22
-  static const byte SCL_PIN =  D1;     // i2c SCL
-  static const byte SDA_PIN =  D2;     // i2c SDA
-  static const byte ECHO_PIN = D7;     // USS ECHO Pin
-  static const byte TRIG_PIN = D8;     // USS TRIG Pin
-  static const byte ONEB_PIN = D6;     // One Wir e buss 4.75K ohm resistor
-  static const byte PWR_PIN =  D3;     // Batt Charging yes/no was D0
-  //static const byte DNE_PIN =  D4;     // Not used, terminated on row 20
-  static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
-/*********************** END PIN DEFINITIONS *****************************************/
-
+  
 /************************************************************************************
-  Ver 0007A
+  Ver 000709
 
   Implements HTTP Update and subsribes to nodered looking for update. If Update == 1, then
   calls checkForUpdate.
@@ -113,8 +96,14 @@ if (millis() >= pingTimer) { //pingSpeed millis since last ping; do another ping
 
 02/02/2019
 New repo for .709. Going to add ability to specify upgrade file in NodeRed rather than just
-using the auto-upgrade. NodeRed shouid use a "file picker" widgit
- **************************************************************************************/
+using the auto-upgrade. NodeRed should use a "file picker" widgit
+
+03/02/2018
+Force upgrade implemented and deployed. No "file picker" bit does allow to force a downgrade by not 
+doing a version check.
+Adding function declarations at top of file (may be later moved ot .h file) and will move setup and loop 
+to above other functions -> 0.0.0.710
+ ***************************************************************************************************/
 
 
 #include <stdio.h> 
@@ -148,13 +137,12 @@ extern "C" {
 #include "user_interface.h"
 }
 
-//***************** Define which station and platform we are compling for **************
+//*************************** Station and Platform definitions ********************
 #define Wemos 1
 //#define TBOffice  1
 //#define BethOffice 1
 //#define Liv_Patio  1
 // #define Danube 1  // The two outside temp sensor module
-//***************** End define which station compiling for ****************
 
 //#ifdef TBOffice
  //  #define Danube
@@ -163,32 +151,56 @@ extern "C" {
    #define Danube
 #endif
 
-//************************** Function Definitions *******************************************
-// Get BME Readings
+//*************************** End Station and Platform definitions ****************
+
+/*******************************************************************************************
+*                                  Function Definitions                                    *                                     
+*******************************************************************************************/
+ 
+//********************************* BME Functions ******************************************
 char* getBMETemp(BME280_I2C &theBME);
 char* getBMEHumidity(BME280_I2C &theBME);
 char* getBMEPressure(BME280_I2C &theBME);
+//********************************* End BME Functions **************************************
 
-// Get Dallas Temp readings
+//*********************************** Dallas OneWire Functions *******************************
 char* getTubTemp();
 char* getOutTemp();
+//*********************************** End Dallas OneWire Functions **************************
 
-// Get Battery readings
+//************************************* Battery / Charging functions *****************************
 float getBatteryLevel();
+//************************************* End Battery / Charging functions *************************
 
-// Upgrade Functions
+//************************************* Upgrade Functions ****************************************
 char* LastcharDel(char* name);
 int compareSubstr(char *substr_version1, char *substr_version2, 
                   int len_substr_version1, int len_substr_version2);
 int compareVersion(char* version1, const char* version2);
 void checkForUpdates(bool force);  //Checks upgrade image version, force will force an upgrade
-    
-// PubSub functions
+//********************************** End Upgrade Functions ****************************************   
+
+//************************************* PubSub functions ******************************************
 void callback(char* topic, byte* payload, unsigned int length);
 void reconnect();
+//********************************* End PubSub functions ******************************************
 
 
-/************************ OLD PIN DEFINITIONS **********************************************
+
+//*************************************** NTP and WiFi Event Functions *********************************
+void onSTAGotIP(WiFiEventStationModeGotIP ipInfo);
+void onSTADisconnected(WiFiEventStationModeDisconnected event_info);
+void processSyncEvent(NTPSyncEvent_t ntpEvent);
+//************************************ End  NTP and WiFi Event Functions *********************************
+
+
+/**************************************************************************************************
+ *                                 Globals and Constants                                          *
+ **************************************************************************************************/
+
+static const byte timeZone = -8; // PST
+
+/********************************** OLD PIN DEFINITIONS **********************************************
 static const byte LCD_PIN =  D0;     // gate pin to control LCD was D3 10K ohm resistor
 static const byte DST_PIN =  D5;     // gate pin to control distance sensor was D4 10K ohm resistor
 static const byte SCL_PIN =  D1;     // i2c SCL
@@ -199,13 +211,13 @@ static const byte ONEB_PIN = D6;     // One Wire buss 4.75K ohm resistor
 static const byte PWR_PIN =  D3;     // Batt Charging yes/no was D0
 static const byte DNE_PIN =  D4;     // Batt Charged yes/no was D0
 static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
-*********************** END PIN DEFINITIONS *****************************************/
+************************************  END PIN DEFINITIONS *****************************************/
 
 
 
 
 
-//************************ NEW PIN DEFINITIONS **************************************
+//*************************************** NEW PIN DEFINITIONS **************************************
   //  Both npn gates are not being used so remove them freeing up pins D0 and D5
   // D4 was  used batt charge status but it is also the internal led pin
   // Now use D0 for batt charge status (to row 20) and route D04 to opposite row 20) and D5 to row 21
@@ -220,68 +232,155 @@ static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
   static const byte PWR_PIN =  D3;     // Batt Charging yes/no was D0
   //static const byte DNE_PIN =  D4;     // Not used, terminated on row 20
   static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
-//*********************** END PIN DEFINITIONS *****************************************
+//************************************ END NEW PIN DEFINITIONS *****************************************
 
 
-//****************** LCD & Dist Sensor transistor gate pins  **********************
+//******************************* LCD & Dist Sensor transistor gate pins  ******************************
+//                                Deprecated, pins recovered
 //static const byte DST_PIN = D0;  // pin to drive gate pin of 2n222 for ultrasonic sensors - swapped with LCD pin for Ver L
 //static const byte LCD_PIN = D4;   // pin to drive gate pin of 2n222 for LCD on/off - swapped with USS pin for Ver L
-//********************* End gate pin section **************************************
+//*********************************************** End gate pin section **************************************
 
 
-//********************* BTTN_PIN Push LCD Section ***************************
-//static const byte BTTN_PIN = D8; // our BTTN_PIN pin
-//unsigned long BTTN_PINPushedMillis; // when BTTN_PIN was released
+//*************************************** BTTN_PIN Push LCD Section ****************************************************
 unsigned long lcdTurnedOnAt; // when lcd was turned on
-//int turnOnDelay = 500; 
-//int turnOffDelay = 5000; // turn off LED after this time
-//int turnOnLcdDelay = 10000; // wait to turn on LCD - was 500, much better now
 int turnOffLcdDelay = 5000; // turn off LED after this time
 bool lcdReady = false; // flag for when BTTN_PIN is let go
 bool lcdState = false; // for LCD is on or not.
-//**************** END BTTN_PIN Push LCD Section ********************************
+//*************************************** END BTTN_PIN Push LCD Section ***********************************************
 
 
-//*********************** HC-S04 UltraSonic Sensor ********************************#
-//static const byte TRIG_PIN = D8;
-//#define ECHO_PIN     D5
-//static const byte ECHO_PIN = D5;
+//*************************************** HC-S04 UltraSonic Sensor ***************************************************
 unsigned long sensorInRangeMillis; // when in sensor range
-//int MAX_DISTANCE = 100; // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
-//int MAX_DIST = 60;
-//int MIN_DIST = 20;
 byte pingMaxDist = 60;
 byte MIN_DIST = 20;
-//unsigned long pingSpeed = 2500; //How frequently are we going to send out a ping (in milliseconds). 50ms would be 20 times a second.
-//unsigned long pingSpeed = 500;
 int pingSpeed = 500;
-//int pingTimer;
-//unsigned long pingTimer;      // Holds the next ping time
 NewPing sonar(TRIG_PIN, ECHO_PIN, pingMaxDist);
-//NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE); // NewPing setup of pins and maximu
-//************************* END HC-S04 UltraSonic Sensor **************************#
+//*************************************** END HC-S04 UltraSonic Sensor ***********************************************
+
+
+//********************************************* IP, HOSTNAME WIFI  ********************************
+// Static IP Addressing
+#ifdef Wemos
+IPAddress ip(192, 168, 100, 139);
+#elif defined TBOffice
+IPAddress ip(192, 168, 100, 181);
+#elif defined BethOffice
+IPAddress ip(192, 168, 100, 123);
+#elif defined Liv_Patio
+IPAddress ip(192, 168, 100, 137);
+#endif
+IPAddress gateway(192, 168, 100, 1);
+IPAddress subnet(255, 255, 255, 0);
+IPAddress dns(192, 168, 100, 1);
+const char* ssid = "BlueZebra";
+const char* password = "jY7bzy2XJv";
+//const char* IpAddr;
+const char* Version = "0.0.0.710";
+//const int  = 0001;
+#ifdef Wemos
+const char* ahostname = "Wemos";
+#elif defined TBOffice
+const char* ahostname = "TbOffice_Test5";
+#elif defined BethOffice
+const char* ahostname = "BethOffice";
+#elif defined Liv_Patio
+const char* ahostname = "Liv_Patio";
+#endif
+
+const char* fwUrlBase = "http://192.168.100.238/weathernodes/";
+
+//************************* End IP, HOSTNAME,WIFI Defines *********************************
 
 
 
-//********************* Global BME sensor values *************************
-// FIXME - Do I really need to save globals? Just create lcdPrintBme()
-//float lastBmePressure;
-//float lastBmeTempF;
-//float lastBmeHumidity;
-//char tubTempFString[6];
-//char outTmpFString[6];
-
-//************************* End BME sensor globals ******************
-
-//******************** Battery Charging Status Pins and State Variables ***********
-//static const byte PWR_PIN = D3;   // Indicates if power is being supplied to charger board
-//static const byte DNE_PIN = D1;  // Indicates if battery is fully charged
-//************************* End Battery Charging Status **************************
+//*************************** ADC VOLTAGE *************************************************
+// Unique for each chip, have to manually calibrate
+#ifdef TbOfficeClient
+  float ADC_ADJUST = 186;
+#elif defined LIV_Patio
+  float ADC_ADJUST = 183.51;
+#else
+  //float ADC_ADJUST = 175.33;  // Using a 220K resistor, 4.02 = 4.02 = exact at 4.15 V - now about .2 high
+  float ADC_ADJUST = 175.33;
+#endif
+//*************************** END ADC VOLTAGE ***********************************************
 
 
-//*********************** NTP SECTION *******************************
-static const byte timeZone = -8; // PST
+//********************************** PUBSUB AND NODERED SETUP ********************************
+#ifdef Wemos
+WiFiClient(wemosTestClient);
+PubSubClient client(wemosTestClient);
+const char* Client = "wemosTestClient/";
+#elif defined TBOffice
+WiFiClient TbOfficeClient;
+PubSubClient client(TbOfficeClient);
+const char* Client = "TbOfficeClient/";
+#elif defined Liv_Patio
+WiFiClient(LivingPatioClient);
+PubSubClient client(LivingPatioClient);
+const char* Client = "LivingPatioClient/";
+#endif
+// RPI ADDRESS (MQTT BROKER - MOSQUITO)
+const char* mqtt_server = "192.168.100.238";
+//*************************************** END PUBSUB AND NODERED SETUP **************************
 
+//************************************** WiFi MILLIS & SLEEP DEFFINITIONS **********************
+bool awake = true;
+unsigned long previousMillis = 0;
+unsigned long sleepStartMillis = 0;
+int sleeptime = 40; // initial sleep seconds, was byte
+//byte sleeptime = 40; // range 1 - 255 or about 3 minutes sleeptime
+byte numReadings = 2;
+//*************************************** END MILLIS SLEEP DEF"S ********************************
+
+
+// ********************************* ONE WIRE SENSORS **************************************************
+#ifdef Wemos
+DeviceAddress outAddr = {0x28, 0xFF, 0x4F, 0x57, 0x73, 0x16, 0x04, 0xBC}; // real wemos
+//DeviceAddress outAddr={0x28,0xFF,0x3C,0x20,0x72,0x16,0x04,0x1A};   // test wemos
+#elif defined TBOffice
+DeviceAddress tubAddr = {0x28, 0xFF, 0x8D, 0xE7, 0x73, 0x16, 0x03, 0x0F};
+DeviceAddress outAddr = {0x28, 0xFF, 0xCC, 0x88, 0x72, 0x16, 0x03, 0x8A}; // Clone address's
+#elif defined BethOffice
+//DeviceAddress outAddr={0x28,0xFF,0x3C,0x20,0x72,0x16,0x04,0x1A};  // Beth office outside old short
+DeviceAddress outAddr = {0x28, 0x75, 0x64, 0x37, 0x08, 0x00, 0x00, 0x88}; // Beth office outside new long
+#elif defined Liv_Patio
+DeviceAddress outAddr = {0x28, 0xBA, 0x14, 0xB4, 0x07, 0x00, 0x00, 0x050}; // Patio address
+DeviceAddress tubAddr = {0x28, 0xA2, 0x61, 0xC3, 0x06, 0x00, 0x00, 0x90}; //  tub address
+#endif
+//#define ONEB_PIN D4 // D2 on Wemos
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire SensorsPin(ONEB_PIN);
+// Pass our oneWire reference to Dallas Temperature.
+DallasTemperature Sensors(&SensorsPin);
+
+//**************************** END ONE WIRE SETUP ********************************************
+
+/**************************** MANUFACTURING Calibration DEFINES *******************************************
+    This section used to subscribe to topics that will only be used when a new device is brought
+    up  and needs to be calibration but will need to be changed later unless hardware readings change with age
+    examples:
+      1: ADJUST_ADC - only used to adjust the adc reading for vcc which varies for every board
+      2: Temperature, Humidity, Pressure sensors. these change with every device and need to be callibrated
+
+ *****************************************************************************************************/
+#define ADJUST_ADC
+bool callibratingMode = false;
+
+//********************** I2C FOR LCD AND BME **********************************************************
+#define BME_ADJUST -1
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+BME280_I2C bme(0x76);  // I2C using address 0x76
+
+//********************** END I2C SETUP ***************************************************************
+
+
+/******************************************************************************************************
+ *                        Functions                                                      
+ ******************************************************************************************************/
+
+//************************************* NTP and WIFI EVENT FUNCTIONS ********************************
 // Start NTP only after IP network is connected
 void onSTAGotIP(WiFiEventStationModeGotIP ipInfo) {
   Serial.printf("Got IP: %s\r\n", ipInfo.ip.toString().c_str());
@@ -312,138 +411,8 @@ void processSyncEvent(NTPSyncEvent_t ntpEvent) {
 boolean syncEventTRIGed = false; // True if a time event has been TRIGed
 NTPSyncEvent_t ntpEvent; // Last Triggered event
 #endif
-//***************************** END NTP GLOBAL SECTION ********************************
-
-
-//************************** IP, HOSTNAME, , WIFI  ********************************
-// Static IP Addressing
-#ifdef Wemos
-IPAddress ip(192, 168, 100, 139);
-#elif defined TBOffice
-IPAddress ip(192, 168, 100, 181);
-#elif defined BethOffice
-IPAddress ip(192, 168, 100, 123);
-#elif defined Liv_Patio
-IPAddress ip(192, 168, 100, 137);
-#endif
-IPAddress gateway(192, 168, 100, 1);
-IPAddress subnet(255, 255, 255, 0);
-IPAddress dns(192, 168, 100, 1);
-const char* ssid = "BlueZebra";
-const char* password = "jY7bzy2XJv";
-//const char* IpAddr;
-const char* Version = "0.0.0.709";
-//const int  = 0001;
-#ifdef Wemos
-const char* ahostname = "Wemos";
-#elif defined TBOffice
-const char* ahostname = "TbOffice_Test5";
-#elif defined BethOffice
-const char* ahostname = "BethOffice";
-#elif defined Liv_Patio
-const char* ahostname = "Liv_Patio";
-#endif
-
-const char* fwUrlBase = "http://192.168.100.238/weathernodes/";
-
-//********************** End IP, HOSTNAME, , WIFI Defines*********************************
-
-
-
-//*************************** ADC VOLTAGE ***********************************
-// Unique for each chip, have to manually calibrate
-
-//#define ADC_ADJUST 179.33  // Using a 220K resistor  .07 to low
-//#define ADC_ADJUST 169.33  // Using a 220K resistor  .2 to high
-//#define ADC_ADJUST 175.33  // Using a 220K resistor, 4.02 = 4.02 = exact at 4.15 V - now about .2 high
-#ifdef TbOfficeClient
-  float ADC_ADJUST = 186;
-#elif defined LIV_Patio
-  float ADC_ADJUST = 183.51;
-#else
-  //float ADC_ADJUST = 175.33;  // Using a 220K resistor, 4.02 = 4.02 = exact at 4.15 V - now about .2 high
-  float ADC_ADJUST = 175.33;
-#endif
-//*************************** END ADC VOLTAGE ******************************
-
-
-//********************** PUBSUB AND NODERED SETUP ********************************
-#ifdef Wemos
-WiFiClient(wemosTestClient);
-PubSubClient client(wemosTestClient);
-const char* Client = "wemosTestClient/";
-#elif defined TBOffice
-WiFiClient TbOfficeClient;
-PubSubClient client(TbOfficeClient);
-const char* Client = "TbOfficeClient/";
-#elif defined Liv_Patio
-WiFiClient(LivingPatioClient);
-PubSubClient client(LivingPatioClient);
-const char* Client = "LivingPatioClient/";
-#endif
-// RPI ADDRESS (MQTT BROKER - MOSQUITO)
-const char* mqtt_server = "192.168.100.238";
-//********************** END PUBSUB AND NODERED SETUP **************************
-
-//************************ WiFi MILLIS & SLEEP DEFFINITIONS **********************
-bool awake = true;
-unsigned long previousMillis = 0;
-unsigned long sleepStartMillis = 0;
-int sleeptime = 40; // initial sleep seconds, was byte
-//byte sleeptime = 40; // range 1 - 255 or about 3 minutes sleeptime
-byte numReadings = 2;
-//************************ END MILLIS SLEEP DEF"S ********************************
-
-
-// *********************** ONE WIRE SETUP **************************************************
-#ifdef Wemos
-DeviceAddress outAddr = {0x28, 0xFF, 0x4F, 0x57, 0x73, 0x16, 0x04, 0xBC}; // real wemos
-//DeviceAddress outAddr={0x28,0xFF,0x3C,0x20,0x72,0x16,0x04,0x1A};   // test wemos
-#elif defined TBOffice
-DeviceAddress tubAddr = {0x28, 0xFF, 0x8D, 0xE7, 0x73, 0x16, 0x03, 0x0F};
-DeviceAddress outAddr = {0x28, 0xFF, 0xCC, 0x88, 0x72, 0x16, 0x03, 0x8A}; // Clone address's
-#elif defined BethOffice
-//DeviceAddress outAddr={0x28,0xFF,0x3C,0x20,0x72,0x16,0x04,0x1A};  // Beth office outside old short
-DeviceAddress outAddr = {0x28, 0x75, 0x64, 0x37, 0x08, 0x00, 0x00, 0x88}; // Beth office outside new long
-#elif defined Liv_Patio
-DeviceAddress outAddr = {0x28, 0xBA, 0x14, 0xB4, 0x07, 0x00, 0x00, 0x050}; // Patio address
-DeviceAddress tubAddr = {0x28, 0xA2, 0x61, 0xC3, 0x06, 0x00, 0x00, 0x90}; //  tub address
-#endif
-//DeviceAddress tubAddr = {0x28, 0xFF, 0x8D, 0xE7, 0x73, 0x16, 0x03, 0x0F}; // Clone address's
-//DeviceAddress outAddr={0x28,0xBA,0x14,0xB4,0x07,0x00,0x00,0x050};  // out living address
-//DeviceAddress tubAddr={0x28,0xA2,0x61,0xC3,0x06,0x00,0x00,0x90};
-//DeviceAddress tubAddr={0x28,0xFF,0x3C,0x20,0x72,0x16,0x04,0x1A};
-//DeviceAddress tubAddr={0x28,0xA7,0x61,0xC3,0x06,0x00,0x00,0x89};
-//DeviceAddress outAddr = {0x28, 0xFF, 0xCC, 0x88, 0x72, 0x16, 0x03, 0x8A}; // Clone address's
-
-//#define ONEB_PIN D4 // D2 on Wemos
-// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
-OneWire SensorsPin(ONEB_PIN);
-
-// Pass our oneWire reference to Dallas Temperature.
-DallasTemperature Sensors(&SensorsPin);
-
-//**************************** END ONE WIRE SETUP ********************************************
-
-/**************************** MANUFACTURING Calibration DEFINES *******************************************
-    This section used to subscribe to topics that will only be used when a new device is brought
-    up  and needs to be calibration but will need to be changed later unless hardware readings change with age
-    examples:
-      1: ADJUST_ADC - only used to adjust the adc reading for vcc which varies for every board
-      2: Temperature, Humidity, Pressure sensors. these change with every device and need to be callibrated
-
- *****************************************************************************************************/
-#define ADJUST_ADC
-bool callibratingMode = false;
-
-//********************** I2C FOR LCD AND BME ******************************************
-#define BME_ADJUST -1
-LiquidCrystal_I2C lcd(0x27, 20, 4);
-BME280_I2C bme(0x76);  // I2C using address 0x76
-
-
-//********************** END I2C SETUP *****************************************
-
+//***************************** END NTP AND WIFI SECTION ******************************************
+ 
 /****************** PUBSUB  MQTT/NODE RED FUNCTIONS ***************************************
   This functions is executed when some device publishes a message to a topic that your ESP8266 is subscribed to
   Change the function below to add logic to your program, so when a device publishes a message to a topic that
@@ -454,7 +423,8 @@ BME280_I2C bme(0x76);  // I2C using address 0x76
  *  1) Funtions to get BME readings and convert to char* for lcd print and mqtt publish
  *  2) Functions to get Dallas readings and conmvert to char* for lcd print and mqtt publish
  *************************************************************************************************/
- 
+
+//************************************ BME FUNCTIONS ********************************************
 char* getBMETemp(BME280_I2C &theBME)
 {
   float T = theBME.getTemperature_F();
@@ -479,8 +449,9 @@ char* getBMEPressure(BME280_I2C &theBME)
   dtostrf(P, 6, 2, bmePressure);
   return bmePressure;
 }
+//************************************ BME FUNCTIONS ********************************************
 
-// Dallas Temp readings
+//********************************* Dallas One Wire Functions **************************************
 char* getTubTemp()
 {
 #ifdef Danube  
@@ -508,7 +479,7 @@ char* getTubTemp()
   return outTempFString;
 }
 
-
+//****************************** END Dallas One Wire Functions **************************************
 
 /*************************************************************************************
       takes two args, client and topic
@@ -532,7 +503,7 @@ void publishTopic(char topic[])
 
 
 
-//************************ HTTP OTA UPDATE  ***********************************************
+//***************************** HTTP OTA UPDATE FUNCTIONS  ***********************************************
 char* LastcharDel(char* name)
 {
     int i = 0;
@@ -693,17 +664,11 @@ void checkForUpdates(bool force) {
     }
     //if ( newVersion > oldVersion ) {
       Serial.println(F ("Preparing to update" ));
-
-      //String fwImageURL = fwURL;
-      //char* fwImageURL;
       char fwImageURL[100];
       strcpy(fwImageURL, fwURL);
       strcat(fwImageURL, Client);
       LastcharDel(fwImageURL);
       strcat(fwImageURL, ".bin");
-      //fwImageURL.concat(Client);
-      //fwImageURL.remove(fwImageURL.length() - 1);
-      //fwImageURL.concat( ".bin" );
       client.publish(Topic, "Downloading");
       Serial.print(F("firmware image trying to upload "));
       Serial.println(fwImageURL);
@@ -736,133 +701,11 @@ void checkForUpdates(bool force) {
 }
 
 
-/*
-void checkForUpdates() {
-  Serial.println(F("just entered chkforupdates, before char* ClientID"));
-  char ClientID[100];
-  strcpy(ClientID, Client);  // Why this ?
+//************************** END checkForUpdates *********************************************************
 
-  Serial.println(F("Just before char* fwURL"));
-  //char* fwURL;
-  char fwURL[100];
-  strcpy(fwURL, fwUrlBase);
-  strcat(fwURL, Client);
-
-  Serial.println(F("Just before char* fwVersionURL"));
-  char fwVersionURL[100];
-  strcpy(fwVersionURL, fwURL);
-  strcat(fwVersionURL, ".version");
-  
-  Serial.println( F("Checking for firmware updates."));
-  //Serial.print( "MAC address: " );
-  Serial.print(F( "ClientID: "));
-  Serial.println( ClientID );
-  //Serial.println( mac );
-  Serial.print(F( "Firmware version URL: " ));
-  Serial.println(fwVersionURL );
-
-  HTTPClient httpClient;
-  httpClient.begin( fwVersionURL );
-  int httpCode = httpClient.GET();
-  if ( httpCode == 200 ) {
-     char newFWVersion[100];
-     strcpy(newFWVersion, httpClient.getString().c_str());
-
-    Serial.print(F("Current firmware version: " ));
-    //Serial.println( FW_VERSION );
-    Serial.println(Version);
-    Serial.print(F( "Available firmware version: " ));
-    Serial.println( newFWVersion );
-   
-  int cmpVer = compareVersion(newFWVersion,Version);
-
-  Serial.print(F("cmpVer =: "));
-  Serial.println(cmpVer);
-  
-  if (cmpVer == -1 ) {
-    Serial.println(F("New Version is older than current Version: NO UPGRADE"));
-     publishUpgSwitchState(); 
-    }
-  else if (cmpVer == 0 ) {
-    Serial.println(F("New and Old versions are the same: NO UPGRADE"));
-     publishUpgSwitchState(); 
-    
-  }
-  else{
-    Serial.println(F("cmpVer == 1 so going to update"));
-    //int newVersion = newFWVersion.toInt();
-    //int newVersion = atoi(newFWVersion);
-    //int oldVersion = atoi(Version);
-
-    //if ( newVersion > oldVersion ) {
-      Serial.println(F ("Preparing to update" ));
-
-      //String fwImageURL = fwURL;
-      //char* fwImageURL;
-      char fwImageURL[100];
-      strcpy(fwImageURL, fwURL);
-      strcat(fwImageURL, Client);
-      LastcharDel(fwImageURL);
-      strcat(fwImageURL, ".bin");
-      //fwImageURL.concat(Client);
-      //fwImageURL.remove(fwImageURL.length() - 1);
-      //fwImageURL.concat( ".bin" );
-      Serial.print(F("firmware image trying to upload "));
-      Serial.println(fwImageURL);
-
-      t_httpUpdate_return ret = ESPhttpUpdate.update( fwImageURL );
-
-      switch (ret) {
-        case HTTP_UPDATE_FAILED:
-          Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s", ESPhttpUpdate.getLastError(), ESPhttpUpdate.getLastErrorString().c_str());
-          break;
-
-        case HTTP_UPDATE_NO_UPDATES:
-          Serial.println(F("HTTP_UPDATE_NO_UPDATES"));
-          break;
-      }
-    }
-   // else {
-     // Serial.println(F( "Already on latest version" ));
-   // }
-  }
-  else {
-    Serial.print(F("Firmware version check failed, got HTTP response code" ));
-    Serial.println( httpCode );
-    publishUpgSwitchState(); 
-  }
-  httpClient.end();
-}
-*/
-//************************** END checkForUpdates **************************************
-
-
-/************************ Manual Upgrade **************************************
-    Notes 02/02/2019
- 
-  1: Adding ability to do manual upgrade rather than just current "auto" upgrade. This will allow user to specify a file to upgrade
-  with no limitation on version info that auto upgrade has.
-  2: In NodeRed, path should be relative to localhost i.e
-  localhost/$PATH. Reason being we know localhost is accesible from node to be upgraded.
-  So, fwImageURL = localhost.$PATH/$FILENAME. In NodeRed will need a "file picker". Choose file, send
-  $PATH and $FILENAME. http://mqtt_server/$PATH/$FILENAME
-  New function to be called manualUpgrade(char *path, char *filename)
-
-  02/04/2018
-  Why not just add a switch to checkForUpdates to force an upgrade? Still look for same filename in the 
-  same location.
-  ********************************************************************************/
-  int manualUpgrade(char *path, char*filename)
-  {
-  }
- 
-    
- 
-
+//***************************** END HTTP OTA UPDATE FUNCTIONS  ***********************************************
 
 //************************ PubSub Callbacks - Reconnect etc *******************************************
-
-void callback(char* topic, byte* payload, unsigned int length);
 
 void callback(char* topic, byte* message, unsigned int length) {
 
@@ -1552,7 +1395,7 @@ void pubTopic(char Topic[], char Payload[])
   client.publish(topic, payload);
 }
 
-//FIXME - make pubTopioc work!
+//FIXME - make pubTopic work!
 char* makeTopic(char* value)
 {
   // char topic[32];
@@ -1859,9 +1702,6 @@ void publishDallasTemps(void)
 
 unsigned int checkDistance()
 {
-  //digitalWrite(DST_PIN, HIGH);
-  //delay(800); commented out Sept 27 2018
-  //Serial.println(F("Turning DST_PIN HIGH"));
   unsigned int uS = sonar.ping(); // Send ping, get ping time in microseconds (uS).
   uS = sonar.ping();
   unsigned int Tmp = uS / US_ROUNDTRIP_CM;  // US_ROUNDTRIP_CM included in lib ?
@@ -1869,57 +1709,28 @@ unsigned int checkDistance()
 
   //***** Find a way to ping x times, break if Distance in range
   if ( Tmp >= pingMaxDist || Tmp <= MIN_DIST) {
-    //Serial.print(F("sonar distance = "));
-    //Serial.println(Tmp);
-    //Serial.println(F("Out of Range, LCD is OFF"));
-    // Serial.println(F("DST PIN = LOW"));
-    //digitalWrite(DST_PIN, LOW);
     lcdReady = false;
   }
   else {
     sensorInRangeMillis = millis();
     lcdReady = true;
-    //Serial.println(F("Set lcdReady to True, DST PIN to LOW"));
-    //digitalWrite(DST_PIN, LOW);
-  }
- // digitalWrite(DST_PIN, LOW);
-  return (Tmp);
+ }
+ return (Tmp);
 }
 
 void toggleLCD(void)
   {
     unsigned int dS;
     unsigned long currentMillis = millis();
-  //sensorInRangeMillis = currentMillis;
-  //uS = sonar.ping(); // Send ping, get ping time in microseconds (uS).
-  //dS = uS / US_ROUNDTRIP_CM;
-  //dS = getDistance();  // this worked
-
-  //if (millis() >= pingTimer) { //pingSpeed millis since last ping; do another ping
-    // Serial.println(F("ABOUT TO DO CHECKDISTANCE"));
-    //digitalWrite(DST_PIN, LOW);
-    //pingTimer += pingSpeed;   // set the next ping time
     dS = checkDistance();
 
-  //}
   // make sure this code isn't checked until after the range sensor is activated
   if (lcdReady) {
-
-    //Serial.println(F("!!!!!!!!!!!!!!IN IF(LCDREADY !!!!!!!!!!!!!!"));
-    //this is typical millis code here:
-    // FIXME!!
-    // if ((unsigned long)(currentMillis - sensorInRangeMillis) <= turnOnLcdDelay) {
-    //if ((unsigned long)(currentMillis - sensorInRangeMillis) >= 0) {
-    // okay, enough time has passed since the button was let go.
-    //digitalWrite(ULT_LED, HIGH);
-    // setup our next "state"
     lcdState = true;
     // save when the LED turned on
-    //sensorInRangeMillis = currentMillis;
     lcdTurnedOnAt = currentMillis;
     // wait for next arm wave
     lcdReady = false;
-    // Serial.println(F("!!!!!!!!!! In IF ENOUGH TIME HAS PASSED !!!!!!!!!!!!!!!"));
     lcdOn();
     lcdDisplayTemps2();
     //  }
