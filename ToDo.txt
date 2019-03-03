@@ -10,8 +10,14 @@ Install Grafana and InfluxDB to RPI and use for graphing historical data
 points.
 
 IN PROGRESS Code Cleanup
-	perhaps move function declaration to header file, create small library
-for publish/serial/lcd print sensor readings
+perhaps move function declaration to header file, create small library
+for publish/serial/lcd print sensor readings.
+Add ifdef for pin definitions
+#define HW_V1
+#define HW_V2
+
+#ifdef HW_V1
+
 
 Not Started: 
 Add Deep Sleep in two steps.
