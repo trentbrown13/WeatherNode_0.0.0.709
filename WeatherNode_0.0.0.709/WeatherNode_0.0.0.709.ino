@@ -169,6 +169,7 @@ char* getOutTemp();
 //*********************************** End Dallas OneWire Functions **************************
 
 //************************************* Battery / Charging functions *****************************
+void checkChargerStatus(void);
 float getBatteryLevel();
 //************************************* End Battery / Charging functions *************************
 
@@ -379,6 +380,39 @@ BME280_I2C bme(0x76);  // I2C using address 0x76
 /******************************************************************************************************
  *                        Functions                                                      
  ******************************************************************************************************/
+
+//************************************** Batt Charg Functions ****************************************
+void checkChargerStatus(void)
+{
+  char Topic[32];
+
+  // Charging State
+  strcpy(Topic, Client);
+  strcat(Topic, "pwrState");
+  if (digitalRead(PWR_PIN) == LOW)
+  {
+    client.publish(Topic, "Charging");
+  }
+  else
+  {
+    client.publish(Topic, "Not Charging");
+  }
+
+  // Battery Charged
+  strcpy(Topic, Client);
+  strcat(Topic, "dneState");
+
+  if (digitalRead(DNE_PIN) == LOW)
+  {
+    client.publish(Topic, "Charged");
+  }
+  else
+  {
+    client.publish(Topic, "Not Charged");
+  }
+}
+
+//*********************************** End Batt Charg Functions **************************************** 
 
 //************************************* NTP and WIFI EVENT FUNCTIONS ********************************
 // Start NTP only after IP network is connected
@@ -1839,36 +1873,8 @@ void setup() {
 
 
 
-void checkChargerStatus(void)
-{
-  char Topic[32];
 
-  // Charging State
-  strcpy(Topic, Client);
-  strcat(Topic, "pwrState");
-  if (digitalRead(PWR_PIN) == LOW)
-  {
-    client.publish(Topic, "Charging");
-  }
-  else
-  {
-    client.publish(Topic, "Not Charging");
-  }
 
-  // Battery Charged
-  strcpy(Topic, Client);
-  strcat(Topic, "dneState");
-
-  if (digitalRead(DNE_PIN) == LOW)
-  {
-    client.publish(Topic, "Charged");
-  }
-  else
-  {
-    client.publish(Topic, "Not Charged");
-  }
- }
-//}
 
 
 /*****************************************************************************
