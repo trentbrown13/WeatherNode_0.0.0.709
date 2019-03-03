@@ -10,8 +10,17 @@ Install Grafana and InfluxDB to RPI and use for graphing historical data
 points.
 
 IN PROGRESS Code Cleanup
-perhaps move function declaration to header file, create small library
+perhaps move function declarations, functions and globals to a header file, create small library
 for publish/serial/lcd print sensor readings.
+http://forum.arduino.cc/index.php?topic=483350.0
+1: create WeatherNodes.h file
+2: in WeatherNodes.h
+  #ifndef WEATHER_NODES_H
+  #define WEATHER_NODES_H
+  #include <arduino.h> etc - all include files
+etc - look at bottom of above link
+
+
 Add ifdef for pin definitions
 #define HW_V1
 #define HW_V2
