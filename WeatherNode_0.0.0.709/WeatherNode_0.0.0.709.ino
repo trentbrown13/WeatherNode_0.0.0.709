@@ -1724,8 +1724,7 @@ void publishDallasTemps(void)
   strcat(Topic, "Tub/temperature");
   //client.publish("/TbOfficeClient/Tub/temperature", tubTempFString);
   client.publish(Topic, tubTempFString);
- // client.publish(Topic, getTubTemp());
-
+ 
 #endif
   strcpy(Topic, Client);
   strcat(Topic, "Out/temperature");
@@ -1755,11 +1754,11 @@ unsigned int checkDistance()
 
 void toggleLCD(void)
 {
-   unsigned int dS; 
+   //unsigned int dS; 
    unsigned long currentMillis = millis();
    //unsigned long lcdTurnedOnAt;
    // make sure this code isn't checked until after the range sensor is activated
-   dS = checkDistance();
+    checkDistance();
    if (lcdReady) {
       lcdState = true;
     // save when the LED turned on
