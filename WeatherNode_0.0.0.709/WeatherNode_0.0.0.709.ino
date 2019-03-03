@@ -244,7 +244,7 @@ static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
 
 
 //*************************************** BTTN_PIN Push LCD Section ****************************************************
-//unsigned long lcdTurnedOnAt; // when lcd was turned on
+unsigned long lcdTurnedOnAt; // when lcd was turned on
 int turnOffLcdDelay = 5000; // turn off LCD after this time
 bool lcdReady = false; // flag for when BTTN_PIN is let go
 bool lcdState = false; // for LCD is on or not.
@@ -252,7 +252,7 @@ bool lcdState = false; // for LCD is on or not.
 
 
 //*************************************** HC-S04 UltraSonic Sensor ***************************************************
-//unsigned long sensorInRangeMillis; // when in sensor range
+unsigned long sensorInRangeMillis; // when in sensor range
 byte pingMaxDist = 60;
 byte MIN_DIST = 20;
 int pingSpeed = 500;
@@ -328,6 +328,8 @@ const char* mqtt_server = "192.168.100.238";
 
 //************************************** WiFi MILLIS & SLEEP DEFFINITIONS **********************
 bool awake = true;
+unsigned long previousMillis = 0;
+unsigned long sleepStartMillis = 0;
 int sleeptime = 40; // initial sleep seconds, was byte
 //byte sleeptime = 40; // range 1 - 255 or about 3 minutes sleeptime
 byte numReadings = 2;
@@ -1735,7 +1737,7 @@ void publishDallasTemps(void)
 unsigned int checkDistance()
 {
   unsigned int uS = sonar.ping(); // Send ping, get ping time in microseconds (uS).
-  unsigned long sensorInRangeMillis; // when in sensor range
+ // unsigned long sensorInRangeMillis; // when in sensor range
   uS = sonar.ping();
   unsigned int Tmp = uS / US_ROUNDTRIP_CM;  // US_ROUNDTRIP_CM included in lib ?
 
@@ -1747,23 +1749,25 @@ unsigned int checkDistance()
   else {
     sensorInRangeMillis = millis();
     lcdReady = true;
- }
+   }
  return (Tmp);
 }
 
 void toggleLCD(void)
-  {
+{
+   unsigned int dS; 
    unsigned long currentMillis = millis();
-   unsigned long lcdTurnedOnAt;
+   //unsigned long lcdTurnedOnAt;
    // make sure this code isn't checked until after the range sensor is activated
-  if (lcdReady) {
-    lcdState = true;
+   dS = checkDistance();
+   if (lcdReady) {
+      lcdState = true;
     // save when the LED turned on
-    lcdTurnedOnAt = currentMillis;
+      lcdTurnedOnAt = currentMillis;
     // wait for next arm wave
-    lcdReady = false;
-    lcdOn();
-    lcdDisplayTemps2();
+      lcdReady = false;
+      lcdOn();
+      lcdDisplayTemps2();
    }
 
   // see if we are watching for the time to turn off LCD
@@ -1879,8 +1883,8 @@ void setup() {
 void loop() {
 
   unsigned long currentMillis = millis();
-  unsigned long previousMillis = 0;
-  unsigned long sleepStartMillis = 0;
+  //unsigned long previousMillis = 0;
+  //unsigned long sleepStartMillis = 0;
   sleepStartMillis = millis();
   
 #ifdef NTP_ON
