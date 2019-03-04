@@ -144,11 +144,13 @@ extern "C" {
 //#define Liv_Patio  1
 // #define Danube 1  // The two outside temp sensor module
 
-//#ifdef TBOffice
+#//ifdef TBOffice
+  // #define HW_V1
  //  #define Danube
 //#elif defined Liv_Patio
 #ifdef Liv_Patio
    #define Danube
+   #define HW_V2
 #endif
 
 //*************************** End Station and Platform definitions ****************
