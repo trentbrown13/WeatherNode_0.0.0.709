@@ -144,11 +144,13 @@ extern "C" {
 //#define Liv_Patio  1
 // #define Danube 1  // The two outside temp sensor module
 
-//#ifdef TBOffice
+#//ifdef TBOffice
+  // #define HW_V1
  //  #define Danube
 //#elif defined Liv_Patio
 #ifdef Liv_Patio
    #define Danube
+   #define HW_V2
 #endif
 
 //*************************** End Station and Platform definitions ****************
@@ -169,6 +171,7 @@ char* getOutTemp();
 //*********************************** End Dallas OneWire Functions **************************
 
 //************************************* Battery / Charging functions *****************************
+void checkChargerStatus(void);
 float getBatteryLevel();
 //************************************* End Battery / Charging functions *************************
 
@@ -228,7 +231,7 @@ static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
   static const byte SDA_PIN =  D2;     // i2c SDA
   static const byte ECHO_PIN = D7;     // USS ECHO Pin
   static const byte TRIG_PIN = D8;     // USS TRIG Pin
-  static const byte ONEB_PIN = D6;     // One Wir e buss 4.75K ohm resistor
+  static const byte ONEB_PIN = D6;     // One Wire buss 4.75K ohm resistor
   static const byte PWR_PIN =  D3;     // Batt Charging yes/no was D0
   //static const byte DNE_PIN =  D4;     // Not used, terminated on row 20
   static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
@@ -244,7 +247,7 @@ static const byte BATT_PIN = A0;     // Batt Level 220k ohm resistor
 
 //*************************************** BTTN_PIN Push LCD Section ****************************************************
 unsigned long lcdTurnedOnAt; // when lcd was turned on
-int turnOffLcdDelay = 5000; // turn off LED after this time
+int turnOffLcdDelay = 5000; // turn off LCD after this time
 bool lcdReady = false; // flag for when BTTN_PIN is let go
 bool lcdState = false; // for LCD is on or not.
 //*************************************** END BTTN_PIN Push LCD Section ***********************************************
@@ -379,6 +382,39 @@ BME280_I2C bme(0x76);  // I2C using address 0x76
 /******************************************************************************************************
  *                        Functions                                                      
  ******************************************************************************************************/
+
+//************************************** Batt Charg Functions ****************************************
+void checkChargerStatus(void)
+{
+  char Topic[32];
+
+  // Charging State
+  strcpy(Topic, Client);
+  strcat(Topic, "pwrState");
+  if (digitalRead(PWR_PIN) == LOW)
+  {
+    client.publish(Topic, "Charging");
+  }
+  else
+  {
+    client.publish(Topic, "Not Charging");
+  }
+
+  // Battery Charged
+  strcpy(Topic, Client);
+  strcat(Topic, "dneState");
+
+  if (digitalRead(DNE_PIN) == LOW)
+  {
+    client.publish(Topic, "Charged");
+  }
+  else
+  {
+    client.publish(Topic, "Not Charged");
+  }
+}
+
+//*********************************** End Batt Charg Functions **************************************** 
 
 //************************************* NTP and WIFI EVENT FUNCTIONS ********************************
 // Start NTP only after IP network is connected
@@ -1690,8 +1726,7 @@ void publishDallasTemps(void)
   strcat(Topic, "Tub/temperature");
   //client.publish("/TbOfficeClient/Tub/temperature", tubTempFString);
   client.publish(Topic, tubTempFString);
- // client.publish(Topic, getTubTemp());
-
+ 
 #endif
   strcpy(Topic, Client);
   strcat(Topic, "Out/temperature");
@@ -1703,6 +1738,7 @@ void publishDallasTemps(void)
 unsigned int checkDistance()
 {
   unsigned int uS = sonar.ping(); // Send ping, get ping time in microseconds (uS).
+ // unsigned long sensorInRangeMillis; // when in sensor range
   uS = sonar.ping();
   unsigned int Tmp = uS / US_ROUNDTRIP_CM;  // US_ROUNDTRIP_CM included in lib ?
 
@@ -1714,27 +1750,26 @@ unsigned int checkDistance()
   else {
     sensorInRangeMillis = millis();
     lcdReady = true;
- }
+   }
  return (Tmp);
 }
 
 void toggleLCD(void)
-  {
-    unsigned int dS;
-    unsigned long currentMillis = millis();
-    dS = checkDistance();
-
-  // make sure this code isn't checked until after the range sensor is activated
-  if (lcdReady) {
-    lcdState = true;
+{
+   //unsigned int dS; 
+   unsigned long currentMillis = millis();
+   //unsigned long lcdTurnedOnAt;
+   // make sure this code isn't checked until after the range sensor is activated
+    checkDistance();
+   if (lcdReady) {
+      lcdState = true;
     // save when the LED turned on
-    lcdTurnedOnAt = currentMillis;
+      lcdTurnedOnAt = currentMillis;
     // wait for next arm wave
-    lcdReady = false;
-    lcdOn();
-    lcdDisplayTemps2();
-    //  }
-  }
+      lcdReady = false;
+      lcdOn();
+      lcdDisplayTemps2();
+   }
 
   // see if we are watching for the time to turn off LCD
   if (lcdState) {
@@ -1839,36 +1874,8 @@ void setup() {
 
 
 
-void checkChargerStatus(void)
-{
-  char Topic[32];
 
-  // Charging State
-  strcpy(Topic, Client);
-  strcat(Topic, "pwrState");
-  if (digitalRead(PWR_PIN) == LOW)
-  {
-    client.publish(Topic, "Charging");
-  }
-  else
-  {
-    client.publish(Topic, "Not Charging");
-  }
 
-  // Battery Charged
-  strcpy(Topic, Client);
-  strcat(Topic, "dneState");
-
-  if (digitalRead(DNE_PIN) == LOW)
-  {
-    client.publish(Topic, "Charged");
-  }
-  else
-  {
-    client.publish(Topic, "Not Charged");
-  }
- }
-//}
 
 
 /*****************************************************************************
@@ -1876,10 +1883,9 @@ void checkChargerStatus(void)
 ******************************************************************************/
 void loop() {
 
-
-  //Serial.println(F("At very top of loop"));
   unsigned long currentMillis = millis();
-  unsigned int dS;
+  //unsigned long previousMillis = 0;
+  //unsigned long sleepStartMillis = 0;
   sleepStartMillis = millis();
   
 #ifdef NTP_ON
@@ -1978,9 +1984,6 @@ void loop() {
     //******************** WAKING UP ************************************
     // had to add 10 seconds to sleeptime, not sure why
     if ((unsigned long)(currentMillis - previousMillis) >= (sleeptime * 1000 + 10000)) {
-      //if ((unsigned long)(sleepStartMillis - previousMillis) >= sleeptime) {
-      //  Serial.println(F("**************Time to Wake up and get to work!******************"));
-      // Serial.println(F("************** awake = TRUE ******************"));
       awake = true;
       WiFi.forceSleepWake();
       previousMillis = millis();
